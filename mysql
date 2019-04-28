@@ -1,0 +1,180 @@
+一、权限管理
+1、创建用户
+CREATE USER 'username'@'localhost' IDENTIFIED BY 'password';
+说明：
+username：你将创建的用户名
+host：指定该用户在哪个主机上可以登陆，如果是本地用户可用localhost，如果想让该用户可以从任意远程主机登陆，可以使用通配符%
+password：该用户的登陆密码，密码可以为空，如果为空则该用户可以不需要密码登陆服务器
+
+例子：CREATE USER 'ECRO'@'192.168.9.12' IDENTIFIED BY 'password000';
+
+
+2、授权/撤销
+GRANT/REVOKE privileges ON databasename.tablename TO 'username'@'host'
+privileges：用户的操作权限，如SELECT，INSERT，UPDATE等，如果要授予所的权限则使用ALL
+databasename：数据库名
+tablename：表名，如果要授予该用户对所有数据库和表的相应操作权限则可用*表示，如*.*
+
+例子：GRANT SELECT, INSERT ON test.user TO 'pig'@'%';
+
+flush privileges;
+刷新权限
+3、置与更改用户密码
+SET PASSWORD FOR 'username'@'host' = PASSWORD('newpassword');
+如果是当前登陆用户用:
+SET PASSWORD = PASSWORD("newpassword");
+
+4、删除用户
+DROP USER 'username'@'host';
+
+二、增删改查
+1、查看表结构
+desc 表名；
+2、查询： select * from 表 where xxxx字段= 要查询的值；
+例子：select * from instances where uuid = 'sssssesc'
+
+3、插入数据
+INSERT INTO 表名 ( 字段, 字段,...fieldN )
+                       VALUES
+                       ( 数据, value2,...valueN );
+
+4、修改数据
+UPDATE 表名 SET field1=new-value1, field2=new-value2
+[WHERE Clause]（条件语句）
+
+例如：UPDATE runoob_tbl SET runoob_title='学习 C++' WHERE runoob_id=3;
+
+5、删除数据
+DELETE FROM table_name [WHERE Clause]（条件语句）如果没有指定 WHERE 子句，MySQL 表中的所有记录将被删除。
+
+6、like
+SELECT * from runoob_tbl  WHERE runoob_author LIKE '%COM';   查找以。com结尾的数据
+
+7、排序
+mysql> SELECT * from runoob_tbl ORDER BY submission_date ASC; 升序
+
+mysql> SELECT * from runoob_tbl ORDER BY submission_date DESC;降序
+
+
+
+三、导出数据
+
+mysql> SELECT * FROM runoob_tbl 
+    -> INTO OUTFILE '/tmp/runoob.txt';
+
+导出 SQL 格式的数据
+
+mysqldump -u root -p RUNOOB runoob_tbl > dump.txt
+如果你需要导出整个数据库的数据，可以使用以下命令：
+mysqldump -u root -p RUNOOB > database_dump.txt
+
+如果需要备份所有数据库，可以使用以下命令：
+
+$ mysqldump -u root -p --all-databases > database_dump.txt
+password ******
+
+
+
+四、事务
+在 MySQL 中只有使用了 Innodb 数据库引擎的数据库或表才支持事务。
+事务处理可以用来维护数据库的完整性，保证成批的 SQL 语句要么全部执行，要么全部不执行。
+事务用来管理 insert,update,delete 语句
+
+五、MySQL 复制表
+1、检查表的完整性
+show create table user \G; 
+*************************** 1. row ***************************
+       Table: runoob_tbl
+Create Table: CREATE TABLE `runoob_tbl` (
+  `runoob_id` int(11) NOT NULL auto_increment,
+  `runoob_title` varchar(100) NOT NULL default '',
+  `runoob_author` varchar(40) NOT NULL default '',
+  `submission_date` date default NULL,
+  PRIMARY KEY  (`runoob_id`),
+  UNIQUE KEY `AUTHOR_INDEX` (`runoob_author`)
+) ENGINE=InnoDB 
+1 row in set (0.00 sec)
+
+ERROR:
+No query specified
+
+2、步骤二：
+修改SQL语句的数据表名，并执行SQL语句。
+
+mysql> CREATE TABLE `clone_tbl` (
+  -> `runoob_id` int(11) NOT NULL auto_increment,
+  -> `runoob_title` varchar(100) NOT NULL default '',
+  -> `runoob_author` varchar(40) NOT NULL default '',
+  -> `submission_date` date default NULL,
+  -> PRIMARY KEY  (`runoob_id`),
+  -> UNIQUE KEY `AUTHOR_INDEX` (`runoob_author`)
+-> ) ENGINE=InnoDB;
+Query OK, 0 rows affected (1.80 sec)
+
+步骤三：
+
+执行完第二步骤后，你将在数据库中创建新的克隆表 clone_tbl。 如果你想拷贝数据表的数据你可以使用 INSERT INTO... SELECT 语句来实现。
+
+mysql> INSERT INTO clone_tbl (runoob_id,
+    ->                        runoob_title,
+    ->                        runoob_author,
+    ->                        submission_date)
+    -> SELECT runoob_id,runoob_title,
+    ->        runoob_author,submission_date
+    -> FROM runoob_tbl;
+Query OK, 3 rows affected (0.07 sec)
+Records: 3  Duplicates: 0  Warnings: 0
+
+
+mysql复制表的两种方式
+第一、只复制表结构到新表
+
+create table 新表 select * from 旧表 where 1=2
+
+或者
+
+create table 新表 like 旧表 
+
+第二、复制表结构及数据到新表
+
+create table新表 select * from 旧表 
+
+
+六、导入数据
+source /home/abc/abc.sql 
+或
+LOAD DATA LOCAL INFILE 'dump.txt' INTO TABLE mytbl;
+
+
+七、Mysql主从复制
+MySQL之间数据复制的基础是以二进制日志文件（binary log file）来实现的，一台MySQL数据库一旦启用二进制日志后，其作为master，它数据库中所有操作都会以“事件”的方式记录在二进制日志中，其他数据库作为slave通过一个I/O线程与主服务器保持通信，并监控master的二进制日志文件的变化，如果发现master二进制日志文件发生变化，则会把变化复制到自己的中继日志中，然后slave的一个SQL线程会把相关的“事件”执行到自己的数据库中，以此实现从数据库和主数据库的一致性，也就实现了主从复制。
+
+
+八、MySQL高可用架构之MHA
+该软件由两部分组成：MHA Manager（管理节点）和MHA Node（数据节点）。
+MHA Manager可以单独部署在一台独立的机器上管理多个master-slave集群，也可以部署在一台slave节点上。
+MHA Node运行在每台MySQL服务器上，MHA Manager会定时探测集群中的master节点，当master出现故障时，它可以自动将最新数据的slave提升为新的master，然后将所有其他的slave重新指向新的master。
+
+
+要搭建MHA,要求一个复制集群中必须最少有三台数据库服务器，一主二从，即一台充当master，一台充当备用master，另外一台充当从库，因为至少需要三台服务器，
+主---备---从
+
+
+
+
+MySQL 数据类型
+MySQL支持多种类型，大致可以分为三类：数值、日期/时间和字符串(字符)类型。
+数值类型：int 4字节、bigint 8字节 float 4字节 有效数字8位   DOUBLE 8字节，有效数字16位
+日期和时间类型:day time year daytime
+字符串类型:
+CHAR	0-255字节	定长字符串
+VARCHAR	0-65535 字节	变长字符串
+
+数据类型的属性：
+NULL	数据列可包含NULL值
+NOT NULL	数据列不允许包含NULL值
+DEFAULT	默认值
+PRIMARY KEY	主键
+AUTO_INCREMENT	自动递增，适用于整数类型
+UNSIGNED	无符号
+CHARACTER SET name	指定一个字符集
